@@ -76,6 +76,28 @@
 
 举个例子来说，我们在浏览器里打开了一个 tab 网页的时候，就相当于起了一个进程，然后这个进程中又有很多线程，比如`js`引擎线程，渲染线程，`Http`请求线程等等，当发起一个请求时，就是就相当于创建了一个线程，当请求结束后，这个线程就会被摧毁。
 
+## 原型与原型链
+
+## bind、call、apply 区别
+
+这三个方法都是为了改变函数的this指向，
+
+前两者的区别就是call和apply的传参方式不一样，第一个参数都一样，剩余的参数，call接受的是一个参数列表，apply只接受一个参数数组，bind则会返回一个函数，像我们之前的react类组件中，经常会用bind去绑定当前组件的this
+
+## 箭头函数与普通函数（function）的区别是什么？构造函数（function）可以使用 new 生成实例，那么箭头函数可以吗？为什么？
+
+箭头函数是普通函数的简写，可以更优雅的定义一个函数，和普通函数相比，有以下几点差异：
+
+1. 函数体内的 this 对象，就是定义时所在的对象，而不是使用时所在的对象。
+
+2. 不可以使用 arguments 对象，该对象在函数体内不存在。如果要用，可以用 rest 参数代替。
+
+3. 不可以使用 yield 命令，因此箭头函数不能用作 Generator 函数。
+
+4. 不可以使用 new 命令，因为：
+    没有自己的 this，无法调用 call，apply。
+    没有 prototype 属性 ，而 new 命令在执行时需要将构造函数的 prototype 赋值给新的对象的 __proto__
+
 ## Event Loop 执行过程
 
 1. 一开始整个脚本作为一个宏任务执行
@@ -83,7 +105,7 @@
 3. 当宏任务执行完出队后，检测微任务列表，有则依次执行，直到执行全部执行完
 4. 执行浏览器的`UI`线程的渲染工作
 5. 检查是否有`web worker `任务，有则执行
-6. 执行完本轮的宏任务，回到第二步，依次循环，知道宏任务和微任务队列都为空
+6. 执行完本轮的宏任务，回到第二步，依次循环，直到宏任务和微任务队列都为空
 
 微任务包括 `proces.nextTick` 、 `promise`、`MutationObserver`，其中 `process.nextTick` 为 Node 独有。
 
@@ -110,9 +132,64 @@
 
 ## async await 函数
 
+## 节流与防抖
+
+### 节流
+
+节流的核心思想就是如果在定时器的时间范围内再次触发，则不予理睬，等当前定时器完成，才能启动下一个定时器任务。这就好比公交车，10分钟一趟，中间有多少人在站台等待不管，10分钟一到，立马发车。
+
+```javascript
+function throttle(fn, interval) {
+  let flag = true;
+  return function(...args) {
+    let context = this;
+    if (!flag) return;
+    flag = false;
+    setTimeout(() => {
+      fn.apply(context, args);
+      flag = true;
+    }, interval);
+  };
+};
+```
+
+### 防抖
+
+防抖的核心思想就是每次事件的触发则删除原来的定时器，建立新的定时器。类似于游戏里的回城功能，你反复触发回城也只认你最后一次回城，只从最后一次触发算。
+
+```javascript
+function debounce(fn, delay) {
+  let timer = null;
+  return function (...args) {
+    let context = this;
+    if(timer) clearTimeout(timer);
+    timer = setTimeout(function() {
+      fn.apply(context, args);
+    }, delay);
+  }
+};
+```
+
+
+
 ## 浏览器从 url 输入到呈现的过程
 
+1. 进行地址解析，解析出字符串地址中的主机、域名、端口号、参数等
+2. 根据解析出来的域名进行DNS解析
+3. 根据查询到的ip地址寻找目标服务器
+
+   1. 与服务器进行连接
+
+   2. 进入服务器、寻找对应的请求
+4.	浏览器接收到响应码开始处理
+5. 浏览器开始渲染dom，下载css、图片等一些资源，直到这次请求完成
+
+## setTimeout、Promise、Async/Await 的区别
+
 ## webpack 常用 loader 和 plugin
+
+1. loader： css-loader 、less-loader、url-loader、image-loader、file-loader
+2. plugin：ignore-plugin、html-webpack-plugin、clean-webpack-plugin
 
 ## webpack 中 loader 和 plugin 有什么区别
 
@@ -120,17 +197,74 @@ loader，它是一个转换器，将A文件进行编译成B文件，比如：将
 
 plugin是一个扩展器，它丰富了webpack本身，针对是loader结束后，webpack打包的整个过程，它并不直接操作文件，而是基于事件机制工作，会监听webpack打包过程中的某些节点，执行广泛的任务
 
+## 简单说说webpack的构建流程
+
+1. 初始化：启动构建，读取与合并配置参数，加载插件，实例化编译器
+2. 编译过程：从入口的Entry出发，针对每个模块串行调用对应的loader去翻译文件内容，再找到该模块依赖的模块，递归地调用编译处理
+3. 输出过程：将编译后的模块组合成chunk，将chunk转换成文件，输出到文件系统
+
 ## http
 
-## react
+## React / React fiber
+
+主流浏览器的刷新是60Hz，即1s/60Hz，16.6ms浏览器刷新一次，在这16.6ms中，浏览器需要完成JS脚本执行 ---> 样式布局  ---> 样式绘制工作，而浏览器的GUI渲染线程与JS线程是互斥的，在React v16之前的版本，虚拟dom的diff操作都是同步完成的，这就导致一个问题，如果有大量的DOM操作，diff操作过长，也就是JS脚本执行过长，就会造成页面的交互卡顿，掉帧。
+
+为了解决这个问题，React将 diff 操作变成可中断的，只有当浏览器空闲时再做 diff。避免 diff 更新长时间占据浏览器线程。既然我们以浏览器是否有剩余时间作为任务中断的标准，那我们就需要一种机制，当浏览器有剩余时间的时候通知我们，其实部分浏览器已经实现了这个API，也就是requestIdelCallback。
+
+但是由于兼容性和触发频率等问题，React并没有用，而是自己实现了**Scheduler**（调度器），在之前的版本中，React已经实现了Reconciler（协调器）与Renderer（渲染器），协调器负责diff算法，找出变化的组件，渲染器负责把变化的组件渲染到页面上，现在加上调度器，调度器接受到更新后，会先判断有没有更高优先级的更新，没有就会把更新交给协调器，协调器再为此次需要更新虚拟DOM打上增删改查的标记，而这个过程，可能会由于有更高优先级的更新，或当前帧没有剩余时间而中断。而这个过程不会更新页面上的DOM，用户也就看见更新不完成的DOM。
+
+由于采用了上述的机制来做异步可中断更新，之前的用于递归的虚拟DOM就不能满足需要，React就是实现了一种类似链表的数据结构，也就是React fiber ，将原来的递归diff变成了一直可以next的遍历diff，这样就方便做中断和恢复了。
 
 ## 如何在 root 外，生成 react 元素 / 将 react 元素插入 body
 
 ## 写 React 项目时为什么要在列表组件中写 key，其作用是什么？
 
-## 什么是防抖和节流？有什么区别？如何实现？
+## React v16生命周期
 
-## setTimeout、Promise、Async/Await 的区别
+其实现在v16版本已经舍弃了很多如componentWillMount、componentWillReceiveProps等一些生命周期，也加入了一些新的，我就说说现在主要用的：
+
+1. shouldComponentUpdate，这个是判断是否需求更新组件，多用于组件的性能优化
+
+2. componentDidMount 组件挂载后使用，可以在这里进行请求或者订阅
+
+3. componentWillUnmount 组件即将销毁，可以在此处移除订阅，定时器等等
+
+4. render 渲染组件函数
+
+当然现在 hooks 出来 多用useEffect来模拟生命周期函数了
+
+```javascript
+class ExampleComponent extends React.Component {
+  // 用于初始化 state
+  constructor() {}
+  // 用于替换 `componentWillReceiveProps` ，该函数会在初始化和 `update` 时被调用
+  // 因为该函数是静态函数，所以取不到 `this`
+  // 如果需要对比 `prevProps` 需要单独在 `state` 中维护
+  static getDerivedStateFromProps(nextProps, prevState) {}
+  // 判断是否需要更新组件，多用于组件性能优化
+  shouldComponentUpdate(nextProps, nextState) {}
+  // 组件挂载后调用
+  // 可以在该函数中进行请求或者订阅
+  componentDidMount() {}
+  // 用于获得最新的 DOM 数据
+  getSnapshotBeforeUpdate() {}
+  // 组件即将销毁
+  // 可以在此处移除订阅，定时器等等
+  componentWillUnmount() {}
+  // 组件销毁后调用
+  componentDidUnMount() {}
+  // 组件更新后调用
+  componentDidUpdate() {}
+  // 渲染组件函数
+  render() {}
+  // 以下函数不建议使用
+  UNSAFE_componentWillMount() {}
+  UNSAFE_componentWillUpdate(nextProps, nextState) {}
+  UNSAFE_componentWillReceiveProps(nextProps) {}
+}
+```
+
+
 
 ## 为什么虚拟 dom 会提高性能?
 
@@ -176,8 +310,6 @@ plugin是一个扩展器，它丰富了webpack本身，针对是loader结束后�
 3.  使用 Suspense 和 lazy 进行懒加载
 
 ## react diff 算法
-
-## react fiber
 
 ## react setState是同步还是异步
 
@@ -251,17 +383,10 @@ async function async1() {
 }
 ```
 
+## 冒泡排序
 
-## 箭头函数与普通函数（function）的区别是什么？构造函数（function）可以使用 new 生成实例，那么箭头函数可以吗？为什么？
+冒泡排序的原理如下，从第一个元素开始，把当前元素和下一个索引元素进行比较。如果当前元素大，那么就交换位置，重复操作直到比较到最后一个元素，那么此时最后一个元素就是该数组中最大的数。下一轮重复以上操作，但是此时最后一个元素已经是最大数了，所以不需要再比较最后一个元素，只需要比较到 `length - 1` 的位置。
 
-箭头函数是普通函数的简写，可以更优雅的定义一个函数，和普通函数相比，有以下几点差异：
+## 快排
 
-1. 函数体内的 this 对象，就是定义时所在的对象，而不是使用时所在的对象。
-
-2. 不可以使用 arguments 对象，该对象在函数体内不存在。如果要用，可以用 rest 参数代替。
-
-3. 不可以使用 yield 命令，因此箭头函数不能用作 Generator 函数。
-
-4. 不可以使用 new 命令，因为：
-    没有自己的 this，无法调用 call，apply。
-    没有 prototype 属性 ，而 new 命令在执行时需要将构造函数的 prototype 赋值给新的对象的 __proto__
+快排的原理如下。随机选取一个数组中的值作为基准值，从左至右取值与基准值对比大小。比基准值小的放数组左边，大的放右边，对比完成后将基准值和第一个比基准值大的值交换位置。然后将数组以基准值的位置分为两部分，继续递归以上操作。
