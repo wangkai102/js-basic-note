@@ -318,6 +318,20 @@ class ExampleComponent extends React.Component {
 3. 在原生事件中是同步 addEventListener
 4. 在setTimeout/setInterval 是同步
 
+## 调用setState之后发生了什么？
+
+1. 在 `setState` 的时候，React 会为当前节点创建一个 `updateQueue` 的更新列队。
+2. 然后会触发 `reconciliation` 过程，在这个过程中，会使用名为 Fiber 的调度算法，开始生成新的 Fiber 树， Fiber 算法的最大特点是可以做到异步可中断的执行。
+3. 然后 `React Scheduler` 会根据优先级高低，先执行优先级高的节点，具体是执行 `doWork` 方法。
+4. 在 `doWork` 方法中，React 会执行一遍 `updateQueue` 中的方法，以获得新的节点。然后对比新旧节点，为老节点打上 更新、插入、替换 等 Tag。
+5. 当前节点 `doWork` 完成后，会执行 `performUnitOfWork` 方法获得新节点，然后再重复上面的过程。
+6. 当所有节点都 `doWork` 完成后，会触发 `commitRoot` 方法，React 进入 commit 阶段。
+7. 在 commit 阶段中，React 会根据前面为各个节点打的 Tag，一次性更新整个 dom 元素。
+
+## 为什么虚拟dom 会提高性能?
+
+ 虚拟dom 相当于在 JS 和真实 dom 中间加了一个缓存，利用 diff 算法避免了没有必要的 dom 操作，从而提高性能。 
+
 ## 分析以下代码输出
 
 ```javascript
@@ -390,3 +404,21 @@ async function async1() {
 ## 快排
 
 快排的原理如下。随机选取一个数组中的值作为基准值，从左至右取值与基准值对比大小。比基准值小的放数组左边，大的放右边，对比完成后将基准值和第一个比基准值大的值交换位置。然后将数组以基准值的位置分为两部分，继续递归以上操作。
+
+## 性能优化
+
+1. 减少http请求
+2. 使用服务端渲染
+3. 静态资源使用 CDN
+4. 将 CSS 放在文件头部，JavaScript 文件放在底部
+5. 使用字体图标 iconfont 代替图片图标
+6. 压缩文件
+   1. JavaScript：UglifyPlugin
+   2. CSS ：MiniCssExtractPlugin
+   3. HTML：HtmlWebpackPlugin
+7. 图片优化
+   1. 压缩图片
+   2. image-webpack-loader
+   3. 尽可能利用 CSS3 效果代替图片
+8. 通过 webpack 按需加载代码
+9.  if-else 对比 switch
